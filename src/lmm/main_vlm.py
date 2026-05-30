@@ -124,7 +124,7 @@ def main():
     parser.add_argument("--loss_mode", default="mae", choices=["mae", "mse"])
     parser.add_argument("--quant_vision", action="store_true")
     # -----------------vlm eval setting------------------------------------
-    parser.add_argument("--tasks", default=None, help="To get full list of tasks, use the command lmms-eval --tasks list")
+    parser.add_argument("--tasks", default="mmmu_val,realworldqa,ocrbench,ai2d", help="Comma-separated lmms-eval tasks. Use `lmms-eval --tasks list` for all tasks.")
     parser.add_argument("--num_fewshot", type=int, default=None, help="Number of examples in few-shot context")
     parser.add_argument("--eval_batch_size","-b",type=str, default=1, metavar="auto|auto:N|N", help="Acceptable values are 'auto', 'auto:N' or N, where N is an integer. Default 1.",)
     parser.add_argument("--max_batch_size", type=int, default=None, metavar="N", help="Maximal batch size to try with --batch_size auto.",)    
@@ -289,7 +289,7 @@ def main():
         
 
         if args.epochs > 0:
-            assert args.wbits < 16 or args.input_bits < 16 or args.output_bits < 16
+            assert args.wbits < 16 or args.input_bits < 16 or args.k_bits < 16 or args.v_bits < 16
             logger.info("=== start quantization Training ===")
             tick = time.time()     
             # load calibration dataset
@@ -321,25 +321,25 @@ def main():
         train_utils.save_dict_as_json(quant_config, os.path.join(args.save_quant_dir, 'quant_config.json'))
         logger.info(f"save model to {args.save_quant_dir} success")
         
-    # Eval 
-    if args.quant_type == 'weight_act':
-        set_quant_state(model.model, True, True)
-        for tasks in ["mmmu_val","ocrbench","textvqa_val","vizwiz_vqa_val","seedbench"]: 
-            args.tasks = tasks
-            args.log_samples_suffix = tasks
-            logger.info(f"INFO === Eval on W4A4 ===")
-            weight_act_bit_refactor(model.model, 4, 4)
+    # Eval
+    if args.output_path:
+        args.batch_size = args.eval_batch_size
+        if args.quant_type == 'weight_act':
+            set_quant_state(model.model, True, True)
+            logger.info(f"Eval on W{args.wbits}A{args.input_bits}, tasks={args.tasks}")
+            weight_act_bit_refactor(model.model, args.wbits, args.input_bits)
+            args.log_samples_suffix = f"w{args.wbits}a{args.input_bits}"
             model.to_cuda()
             cli_evaluate(lm, args)
-    elif args.quant_type == 'weight_only':
-        set_quant_state(model.model, True, False)
-        for tasks in ["mmmu_val","ocrbench","textvqa_val","vizwiz_vqa_val","seedbench"]: 
-            args.tasks = tasks
-            args.log_samples_suffix = tasks
-            logger.info(f"INFO === Eval on W2 ===")
-            model_bit_refactor(model.model, 2)
+        elif args.quant_type == 'weight_only':
+            set_quant_state(model.model, True, False)
+            logger.info(f"Eval on W{args.wbits}A16, tasks={args.tasks}")
+            model_bit_refactor(model.model, args.wbits)
+            args.log_samples_suffix = f"w{args.wbits}a16"
             model.to_cuda()
             cli_evaluate(lm, args)
+    else:
+        logger.info("output_path not set, skipping lmms-eval")
 
     torch.cuda.empty_cache()
     train_utils.cleanup_memory()
