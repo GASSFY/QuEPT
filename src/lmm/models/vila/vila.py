@@ -10,7 +10,7 @@ from accelerate.hooks import remove_hook_from_submodules
 from typing import Dict, Optional, Sequence, List
 from torch.utils.data import ConcatDataset, Dataset, default_collate
 
-from qmllm.models.vila import conversation as conversation_lib
+from models.vila import conversation as conversation_lib
 from .tokenizer import preprocess_conversation, tokenizer_image_token
 from llava.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IMAGE_TOKEN_INDEX
 

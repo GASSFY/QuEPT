@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import torch
 import transformers
 
-from qmllm.models.vila import conversation as conversation_lib
+from models.vila import conversation as conversation_lib
 from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 
 __all__ = [
